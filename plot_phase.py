@@ -29,6 +29,7 @@ def smooth(x,window_len=11,window='hanning'):
 
 f = tables.openFile(sys.argv[2], 'r')
 IQ = f.root.IQ.read()
+f.close()
 for iq in IQ:
     P.figure()
     P.subplot(221)
@@ -39,12 +40,16 @@ for iq in IQ:
     P.axis('equal')
     P.grid()
     ph = N.unwrap(N.angle(xc))
-    P.subplot(222)
-    P.plot(ph)
-    P.subplot(223)
+    time = N.arange(len(ph), dtype=float)/FPS
+    ax2=P.subplot(222)
+    P.plot(time, ph)
+    P.grid()
+    ax3=P.subplot(223, sharex=ax2)
     fact = FPS/2./N.pi
-    P.plot(fact*N.diff(ph))
-    P.plot(fact*smooth(N.diff(ph), FPS/10), lw=2)
-    P.subplot(224)
+    P.plot(time[:-1], fact*N.diff(ph))
+    P.plot(time[:-1], fact*smooth(N.diff(ph), FPS/10), lw=2)
+    P.grid()
+    ax4=P.subplot(224, sharex=ax3, sharey=ax3)
     P.specgram(xc, NFFT=256, Fs=FPS, noverlap=255)
+    P.grid()
 P.show()

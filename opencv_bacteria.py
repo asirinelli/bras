@@ -1,4 +1,4 @@
-import sys
+import sys, os, time
 from opencv import cv, highgui
 import numpy as np
 import tables
@@ -10,6 +10,25 @@ class window:
         self.width = width
         self.height = height
         self.threshold = threshold
+
+class h5_window(tables.IsDescription):
+    id = tables.UInt16Col()
+    x = tables.UInt16Col()
+    y = tables.UInt16Col()
+    width = tables.UInt16Col()
+    height = tables.UInt16Col()
+    threshold = tables.UInt16Col()
+
+def windows_to_h5(windows, table):
+    row = table.row
+    for ii,w in enumerate(windows):
+        row['id'] = ii
+        row['x'] = w.x
+        row['y'] = w.y
+        row['width'] = w.width
+        row['height'] = w.height
+        row['threshold'] = w.threshold
+        row.append()
 
 def save_config(windows, name):
     out = file(name, 'w')
@@ -25,10 +44,13 @@ def read_config(name):
         out.append(window(*l))
     return out
 
-def window_placement(image,x, y, width, height, color):
+def window_placement(image,x, y, width, height, color, nb=None):
     cv.cvRectangle(image, cv.cvPoint(x, y),
                    cv.cvPoint(x + width, y + height),
                    color, 1, 8, 0)
+    if nb != None:
+        cv.cvPutText(image, '%0d'%nb, cv.cvPoint(x+width+2, y+height/2),
+                     FONT, color)
 
 def get_IQ(capture, windows):
   nb_frames = int(highgui.cvGetCaptureProperty(capture,
@@ -79,12 +101,20 @@ def get_IQ(capture, windows):
 def set_windows(capture, windows_list=[]):
     # create windows
     highgui.cvNamedWindow('Film', highgui.CV_WINDOW_AUTOSIZE)
-    threshold = 128
+    if windows_list:
+        threshold = windows_list[-1].threshold
+    else:
+        threshold = 128
     x = 200
     y = 100
     height = 20
     width = 20
+    cap_height = int(highgui.cvGetCaptureProperty(capture,
+                                                  highgui.CV_CAP_PROP_FRAME_HEIGHT))
+    cap_width = int(highgui.cvGetCaptureProperty(capture,
+                                                 highgui.CV_CAP_PROP_FRAME_WIDTH))
 
+#    frame_gray = cv.cvCreateMat(cap_height, cap_width, cv.CV_8UC1)
     while 1:
         # capture the current frame
         frame = highgui.cvQueryFrame(capture)
@@ -93,19 +123,17 @@ def set_windows(capture, windows_list=[]):
                                          highgui.CV_CAP_PROP_POS_FRAMES, 0)
             frame = highgui.cvQueryFrame(capture)
 
+        # cv.cvCvtColor(frame, frame_gray, cv.CV_RGB2GRAY)
         # We take the negative
         cv.cvNot(frame, frame)
         # We put a threshold
         cv.cvThreshold(frame, frame, threshold, 0, cv.CV_THRESH_TOZERO)
  
         # place the window
-        for w in windows_list:
+        for ii,w in enumerate(windows_list):
             window_placement(frame, w.x, w.y, w.width, w.height,
-                             cv.CV_RGB(255, 0, 0))
-        window_placement(frame, x, y, width, height, cv.CV_RGB(0,255,0))
+                             cv.CV_RGB(255, 0, 0), ii)
  
-        # display image
-        highgui.cvShowImage('Film', frame)
  
         # handle events
         k = highgui.cvWaitKey(10)
@@ -138,8 +166,12 @@ def set_windows(capture, windows_list=[]):
                     windows_list.pop()
 #            else:
 #              print ord(k)
+        window_placement(frame, x, y, width, height, cv.CV_RGB(0,255,0))
+        # display image
+        highgui.cvShowImage('Film', frame)
+
     highgui.cvDestroyWindow('Film')
-    return windows_list
+    return windows_list, frame
 
                          
 if __name__ == "__main__":
@@ -152,25 +184,33 @@ if __name__ == "__main__":
  
     # create capture device
     capture = highgui.cvCreateFileCapture(sys.argv[1])
+    root, ext = os.path.splitext(sys.argv[1])
+    root += time.strftime('_%Y-%m-%d_%Hh%M')
+    config_file = root + '.txt'
+    h5_file = root + '.h5'
+    png_file = root + '.png'
     nb_frames = highgui.cvGetCaptureProperty(capture,
                                              highgui.CV_CAP_PROP_FRAME_COUNT)
     print "Frame rate : %g fps"%highgui.cvGetCaptureProperty(capture,
                                                              highgui.CV_CAP_PROP_FPS)
     print "Number of frames : %g"%nb_frames
-
+    FONT = cv.cvInitFont(cv.CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5)
     # check if capture device is OK
     if not capture:
         print "Error opening capture device"
         sys.exit(1)
     if len(sys.argv) > 2:
         windows_list = read_config(sys.argv[2])
-        windows_list = set_windows(capture, windows_list)
+        windows_list, frame = set_windows(capture, windows_list)
     else:
-        windows_list = set_windows(capture)
-    save_config(windows_list, sys.argv[1][:-3]+'txt')
+        windows_list, frame = set_windows(capture)
+    save_config(windows_list, config_file)
+    highgui.cvSaveImage(png_file, frame)
     highgui.cvSetCaptureProperty(capture, highgui.CV_CAP_PROP_POS_FRAMES, 0)
 
     data = get_IQ(capture, windows_list)
-    out = tables.openFile(sys.argv[1][:-3]+'h5', 'w', title = sys.argv[1])
-    out.createArray('/', 'IQ', data)
+    out = tables.openFile(h5_file, 'w', title = sys.argv[1])
+    out.createArray('/', 'IQ', data, title='Position of bacteria centre')
+    table_windows = out.createTable('/', 'windows', h5_window, 'Windows used in video')
+    windows_to_h5(windows_list, table_windows)
     out.close()
