@@ -17,5 +17,8 @@ case $? in
     1) FPS="1"
 esac
 
-python opencv_bacteria.py $MOVIE $CONFIG
-python plot_phase.py $FPS ${MOVIE%\.avi}.h5
+
+python opencv_bacteria.py $MOVIE $FPS $CONFIG
+DATA="/tmp/"$(basename $MOVIE avi)"data"
+python plot_phase.py $(cat $DATA)
+rm $DATA

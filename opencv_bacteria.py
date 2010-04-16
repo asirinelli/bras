@@ -185,22 +185,27 @@ if __name__ == "__main__":
     # create capture device
     capture = highgui.cvCreateFileCapture(sys.argv[1])
     root, ext = os.path.splitext(sys.argv[1])
+    info_file = '/tmp/'+os.path.basename(root)+'.data'
     root += time.strftime('_%Y-%m-%d_%Hh%M')
     config_file = root + '.txt'
     h5_file = root + '.h5'
     png_file = root + '.png'
+
+    FPS = int(sys.argv[2])
+
     nb_frames = highgui.cvGetCaptureProperty(capture,
                                              highgui.CV_CAP_PROP_FRAME_COUNT)
     print "Frame rate : %g fps"%highgui.cvGetCaptureProperty(capture,
-                                                             highgui.CV_CAP_PROP_FPS)
+                                                             highgui.CV_CAP_PROP_FPS), FPS
     print "Number of frames : %g"%nb_frames
     FONT = cv.cvInitFont(cv.CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5)
     # check if capture device is OK
     if not capture:
         print "Error opening capture device"
         sys.exit(1)
-    if len(sys.argv) > 2:
-        windows_list = read_config(sys.argv[2])
+
+    if len(sys.argv) > 3:
+        windows_list = read_config(sys.argv[3])
         windows_list, frame = set_windows(capture, windows_list)
     else:
         windows_list, frame = set_windows(capture)
@@ -211,6 +216,10 @@ if __name__ == "__main__":
     data = get_IQ(capture, windows_list)
     out = tables.openFile(h5_file, 'w', title = sys.argv[1])
     out.createArray('/', 'IQ', data, title='Position of bacteria centre')
+    out.createArray('/', 'FPS', FPS, title='Frames per second')
     table_windows = out.createTable('/', 'windows', h5_window, 'Windows used in video')
     windows_to_h5(windows_list, table_windows)
     out.close()
+    info = file(info_file, 'w')
+    info.write(h5_file)
+    info.close()
