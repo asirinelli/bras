@@ -1,6 +1,6 @@
 import pylab as P
 import numpy as N
-import sys, tables
+import sys, tables, os
 
 def smooth(x,window_len=11,window='hanning'):
     if x.ndim != 1:
@@ -29,9 +29,11 @@ f = tables.openFile(sys.argv[1], 'r')
 IQ = f.root.IQ.read()
 FPS = f.root.FPS.read()
 f.close()
+ii = 0
 for iq in IQ:
-    P.figure()
-    P.subplot(221)
+    fig = P.figure()
+    fig.suptitle(os.path.split(sys.argv[1])[1]+" # %d" %ii)
+    ax1 = P.subplot(221)
     P.plot(iq[:,0],iq[:,1], ',')
     xc = iq[:,0] + 1j *iq[:,1]
     xc = xc -N.mean(xc)
@@ -40,20 +42,28 @@ for iq in IQ:
     P.grid()
     ph = N.unwrap(N.angle(xc))
     time = N.arange(len(ph), dtype=float)/FPS
-    ax2=P.subplot(222)
+
+    ax2 = P.subplot(222)
+    ax2.yaxis.set_label_position('right')
+    ax2.yaxis.set_ticks_position('right')
     P.plot(time, ph/2./N.pi)
     P.ylabel('Turns')
     P.grid()
-    ax3=P.subplot(223, sharex=ax2)
+    ax3 = P.subplot(223, sharex=ax2)
     fact = FPS/2./N.pi
     P.plot(time[:-1], fact*N.diff(ph))
     P.plot(time[:-1], fact*smooth(N.diff(ph), FPS/10), lw=2)
     P.grid()
     P.xlabel('time (s)')
     P.ylabel('Rotation per second')
+
     ax4=P.subplot(224, sharex=ax3, sharey=ax3)
-    P.specgram(xc, NFFT=256, Fs=FPS, noverlap=255)
+    ax4.yaxis.set_label_position('right')
+    ax4.yaxis.set_ticks_position('right')
+    P.specgram(xc, NFFT=256, Fs=FPS, noverlap=0)
     P.grid()
     P.xlabel('time (s)')
     P.ylabel('Rotation per second')
+    P.savefig(os.path.splitext(sys.argv[1])[0]+"_%02d.png" %ii)
+    ii += 1
 P.show()
