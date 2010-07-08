@@ -18,7 +18,7 @@ case $? in
 esac
 
 
-python opencv_bacteria.py $MOVIE $FPS $CONFIG
+python opencv_bacteria.py "$MOVIE" $FPS "$CONFIG"
 DATA="/tmp/"$(basename $MOVIE avi)"data"
-python plot_phase.py $(cat $DATA)
-rm $DATA
+python plot_phase.py "$(cat $DATA)"
+rm "$DATA"
