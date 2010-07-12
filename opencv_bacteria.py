@@ -83,6 +83,9 @@ def get_IQ(capture, windows):
 #                               range(arr.shape[1]))
 
       M00 = np.sum(arr)
+      if M00 == 0:
+          print "No pixel found (frame: %d, window: %d)" % (fi, ii)
+          M00 = 1
       M10 = np.sum(matX[ii]*arr)
       M01 = np.sum(matY[ii]*arr)
       X = float(M10)/float(M00)
@@ -113,6 +116,8 @@ def set_windows(capture, windows_list=[]):
                                                   highgui.CV_CAP_PROP_FRAME_HEIGHT))
     cap_width = int(highgui.cvGetCaptureProperty(capture,
                                                  highgui.CV_CAP_PROP_FRAME_WIDTH))
+    nb_frames = highgui.cvGetCaptureProperty(capture,
+                                             highgui.CV_CAP_PROP_FRAME_COUNT)
 
 #    frame_gray = cv.cvCreateMat(cap_height, cap_width, cv.CV_8UC1)
     while 1:
@@ -157,13 +162,36 @@ def set_windows(capture, windows_list=[]):
                 width += 2
             elif ord(k) == 103:
               threshold -= 2
+              print threshold
             elif ord(k) == 116:
               threshold += 2
+              print threshold
             elif ord(k) == 32:
                 windows_list.append(window(x, y, width, height, threshold))
             elif ord(k) == 8:
                 if windows_list:
                     windows_list.pop()
+            elif ord(k) == 119:
+                highgui.cvSetCaptureProperty(capture,
+                                             highgui.CV_CAP_PROP_POS_FRAMES, 0)
+                print "Frame 0/%d"%(nb_frames)
+            elif ord(k) == 120:
+                highgui.cvSetCaptureProperty(capture,
+                                             highgui.CV_CAP_PROP_POS_FRAMES,
+                                             int(nb_frames/4))
+                print "Frame %d/%d"%(int(nb_frames/4), nb_frames)
+            elif ord(k) == 99:
+                highgui.cvSetCaptureProperty(capture,
+                                             highgui.CV_CAP_PROP_POS_FRAMES,
+                                             int(nb_frames/2))
+                print "Frame %d/%d"%(int(nb_frames/2), nb_frames)
+            elif ord(k) == 118:
+                highgui.cvSetCaptureProperty(capture,
+                                             highgui.CV_CAP_PROP_POS_FRAMES,
+                                             int(3*nb_frames/4))
+                print "Frame %d/%d"%(int(3*nb_frames/4), nb_frames)
+
+
 #            else:
 #              print ord(k)
         window_placement(frame, x, y, width, height, cv.CV_RGB(0,255,0))
