@@ -1,4 +1,6 @@
-import gtk, sys, tables
+#!/usr/bin/env python
+
+import gtk, sys, tables, os, csv
 import numpy as np
 import matplotlib 
 matplotlib.use('GTK') 
@@ -7,7 +9,7 @@ from matplotlib import figure
 from matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg as FigureCanvas
 from matplotlib.backends.backend_gtkagg import NavigationToolbar2GTKAgg as NavigationToolbar
 import matplotlib.ticker as ticker
-
+import gobject
 
 def smooth(x,window_len=11,window='hanning'):
     if x.ndim != 1:
@@ -55,14 +57,50 @@ class Application:
         response = chooser.run()
         if response == gtk.RESPONSE_OK: filename = chooser.get_filename()
         chooser.destroy()
-        
         return filename
 
     def on_open_menu(self, menuitem, data=None):
-        filename = self.get_open_filename()
-        if filename:
-            self.load_file(filename)
+        self.filename = self.get_open_filename()
+        if self.filename:
+            self.load_file(self.filename)
             self.set_bacteria(0)
+
+    def on_save_menu(self, menuitem, data=None):
+        file_save = self.get_save_filename(os.path.dirname(self.filename),
+                                           os.path.splitext(os.path.split(self.filename)[1])[0] + '.csv')
+        if file_save == None:
+            return
+        writer = csv.writer(open(file_save, 'w'))
+        writer.writerow([os.path.split(self.filename)[1]])
+        writer.writerow(['Bact.', 'start', 'stop', 'dt', 'v', 'v2', 'vfft'])
+        for t in self.treestores:
+            for r in t:
+                data = r[5]
+                writer.writerow([data['bacteria'],
+                                 data['start'],
+                                 data['stop'],
+                                 data['dt'],
+                                 data['v'],
+                                 data['v2'],
+                                 data['vfft']])
+
+    def get_save_filename(self, directory, filename):
+        filesave = None
+        chooser = gtk.FileChooserDialog("Save File...", self.window,
+                                        gtk.FILE_CHOOSER_ACTION_SAVE,
+                                        (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, 
+                                         gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+        csvfilter = gtk.FileFilter()
+        csvfilter.set_name("CSV files")
+        csvfilter.add_pattern("*.csv")
+        chooser.add_filter(csvfilter)
+        chooser.set_current_folder(directory)
+        chooser.set_current_name(filename)
+        response = chooser.run()
+        if response == gtk.RESPONSE_OK:
+            filesave = chooser.get_filename()
+        chooser.destroy()
+        return filesave
 
     def load_file(self, filename):
         f = tables.openFile(filename, 'r')
@@ -71,6 +109,9 @@ class Application:
         self.FPS = f.root.FPS.read()
         self.nb_bacteria = self.IQ.shape[0]
         f.close()
+        self.treestores = []
+        for ii in range(self.nb_bacteria):
+            self.treestores.append(gtk.TreeStore(str, str, str, str, str, gobject.TYPE_PYOBJECT))
 
     def set_bacteria(self, index):
         self.index = index
@@ -89,10 +130,16 @@ class Application:
                            self.vit_phase_smooth,
                            lw=2)
         self.ax_phase.grid(True)
+        self.ax_phase.set_title("%s / %d" % (os.path.basename(self.filename),
+                                             self.index))
+        self.ax_phase.set_ylabel('Rotation speed (Hz)')
         self.ax_spec.clear()
         self.ax_spec.specgram(self.xc, NFFT=128, Fs=self.FPS, noverlap=0)
         self.ax_spec.xaxis.set_major_formatter(ticker.FuncFormatter(format_min))
         self.ax_spec.grid(True)
+        self.ax_spec.set_ylabel('Rotation speed (Hz)')
+        self.ax_spec.set_xlabel('time (min:s)')
+
         self.canvas.draw()
         if index == 0:
             self.button_previous.set_sensitive(False)
@@ -102,6 +149,7 @@ class Application:
             self.button_next.set_sensitive(False)
         else:
             self.button_next.set_sensitive(True)
+        self.treeview.set_model(self.treestores[index])
 
     def on_about(self, menuitem, data=None):
         if self.about_dialog: 
@@ -150,8 +198,20 @@ class Application:
             fft = np.abs(np.fft.fft(xc_loc))
             vit = np.fft.fftfreq(len(fft), 1./self.FPS)
             vmean3 = vit[np.argmax(fft)]
-            self.treestore.append(None, [self.last_clicked,
-                                         event.xdata,vmean,vmean2,vmean3])
+            data = {'start': self.last_clicked,
+                    'stop': event.xdata,
+                    'dt': event.xdata-self.last_clicked,
+                    'v': vmean,
+                    'v2': vmean2,
+                    'vfft': vmean3,
+                    'bacteria': self.index}
+            self.treestores[self.index].append(None,
+                                               [ format_min(data['start']),
+                                                 format_min(data['stop']),
+                                                 "%.2f" % data['v'],
+                                                 "%.2f" % data['v2'],
+                                                 "%.2f" % data['vfft'],
+                                                 data])
             
             for widget in [self.button_add, self.button_del, self.treeview]:
                 widget.set_sensitive(True)
@@ -170,7 +230,7 @@ class Application:
     def on_button_del_clicked(self, widget, data=None):
         treemodel, selected = self.treeview.get_selection().get_selected()
         if selected:
-            self.treestore.remove(selected)
+            self.treestores[self.index].remove(selected)
     
     def on_button_next_clicked(self, widget, data=None):
         if (self.index + 1) < self.nb_bacteria:
@@ -193,11 +253,15 @@ class Application:
         self.window = builder.get_object("window")
         self.statusbar = builder.get_object("statusbar")
         self.treeview = builder.get_object("treeview")
-        self.treeviewcolumn1 = builder.get_object("treeviewcolumn1")
-        self.treeviewcolumn2 = builder.get_object("treeviewcolumn2")
-        self.treeviewcolumn3 = builder.get_object("treeviewcolumn3")
-        self.treeviewcolumn4 = builder.get_object("treeviewcolumn4")
-        self.treeviewcolumn5 = builder.get_object("treeviewcolumn5")
+#        self.treeview.set_model(gtk.TreeStore(float, float, float, float, float))
+        cell = gtk.CellRendererText()
+
+        for ii, title in enumerate(["start", "stop", "<v>", "<v2>", "<vfft>"]):
+            treeviewcolumn = gtk.TreeViewColumn(title)
+            self.treeview.append_column(treeviewcolumn)
+            treeviewcolumn.pack_start(cell, True)
+            treeviewcolumn.add_attribute(cell, 'text', ii)
+
         self.plot = builder.get_object("plot")
         self.button_add = builder.get_object("button_add")
         self.button_del = builder.get_object("button_del")
@@ -207,18 +271,6 @@ class Application:
         self.button_next = builder.get_object("button_next")
         self.last_clicked = None
         self.about_dialog = None
-
-        self.cell = gtk.CellRendererText()
-        self.treeviewcolumn1.pack_start(self.cell, True)
-        self.treeviewcolumn1.add_attribute(self.cell, 'text', 0)
-        self.treeviewcolumn2.pack_start(self.cell, True)
-        self.treeviewcolumn2.add_attribute(self.cell, 'text', 1)
-        self.treeviewcolumn3.pack_start(self.cell, True)
-        self.treeviewcolumn3.add_attribute(self.cell, 'text', 2)
-        self.treeviewcolumn4.pack_start(self.cell, True)
-        self.treeviewcolumn4.add_attribute(self.cell, 'text', 3)
-        self.treeviewcolumn5.pack_start(self.cell, True)
-        self.treeviewcolumn5.add_attribute(self.cell, 'text', 4)
 
         # connect signals
         builder.connect_signals(self)
@@ -232,18 +284,15 @@ class Application:
         # setup matplotlib stuff on first notebook page (empty graph)   
         self.figure = Figure(figsize=(6,4), dpi=72)   
         self.ax_phase = self.figure.add_subplot(211)   
-        self.ax_phase.set_xlabel('time')   
-        self.ax_phase.set_ylabel('Speed')   
-        self.ax_phase.set_title('Title')   
         self.ax_phase.grid(True)
         self.ax_spec = self.figure.add_subplot(212, sharex=self.ax_phase,
                                                sharey=self.ax_phase)
-
+        self.ax_spec.grid(True)
         self.canvas = FigureCanvas(self.figure) # a gtk.DrawingArea   
         self.toolbar = NavigationToolbar(self.canvas, self.window)
         self.plot.pack_start(self.canvas)
         self.plot.pack_start(self.toolbar, False, False)
-        self.ax_phase.plot([1,2,3,2,1])
+
         self.canvas.show()   
 
     # Run main application window

@@ -2,20 +2,6 @@
 <interface>
   <requires lib="gtk+" version="2.16"/>
   <!-- interface-naming-policy project-wide -->
-  <object class="GtkTreeStore" id="treestore">
-    <columns>
-      <!-- column-name tstart -->
-      <column type="gdouble"/>
-      <!-- column-name tstop -->
-      <column type="gdouble"/>
-      <!-- column-name vmean -->
-      <column type="gdouble"/>
-      <!-- column-name vmean2 -->
-      <column type="gdouble"/>
-      <!-- column-name vfft -->
-      <column type="gdouble"/>
-    </columns>
-  </object>
   <object class="GtkWindow" id="window">
     <property name="default_width">800</property>
     <property name="default_height">600</property>
@@ -50,6 +36,7 @@
                         <property name="visible">True</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_save_menu"/>
                       </object>
                     </child>
                     <child>
@@ -120,34 +107,8 @@
                   <object class="GtkTreeView" id="treeview">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="model">treestore</property>
                     <property name="headers_clickable">False</property>
                     <property name="search_column">0</property>
-                    <child>
-                      <object class="GtkTreeViewColumn" id="treeviewcolumn1">
-                        <property name="title">Start</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkTreeViewColumn" id="treeviewcolumn2">
-                        <property name="title">Stop</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkTreeViewColumn" id="treeviewcolumn3">
-                        <property name="title">&lt;v&gt;</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkTreeViewColumn" id="treeviewcolumn4">
-                        <property name="title">&lt;v2&gt;</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkTreeViewColumn" id="treeviewcolumn5">
-                        <property name="title">&lt;vfft&gt;</property>
-                      </object>
-                    </child>
                   </object>
                   <packing>
                     <property name="position">0</property>
@@ -273,9 +234,5 @@
         </child>
       </object>
     </child>
-  </object>
-  <object class="GtkImage" id="image1">
-    <property name="visible">True</property>
-    <property name="stock">gtk-missing-image</property>
   </object>
 </interface>
