@@ -157,7 +157,8 @@ class Application(QtGui.QMainWindow):
             return
         writer = csv.writer(open(file_save, 'w'))
         writer.writerow([os.path.split(self.filename)[1]])
-        writer.writerow(['Bact.', 'start', 'stop', 'dt', 'v', 'v2', 'vfft'])
+        writer.writerow(['Bact.', 'start', 'stop', 'dt', 'v', 'v2', 'vfft',
+                         'start', 'stop'])
         for m in self.models:
             for data in m.dataset:
                 writer.writerow([data['bacteria'],
@@ -166,7 +167,9 @@ class Application(QtGui.QMainWindow):
                                  data['dt'],
                                  data['v'],
                                  data['v2'],
-                                 data['vfft']])
+                                 data['vfft'],
+                                 format_min(data['start']),
+                                 format_min(data['stop'])])
 
     def get_save_filename(self, directory, filename):
         filesave = QtGui.QFileDialog.getSaveFileName(self,
