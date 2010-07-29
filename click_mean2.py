@@ -122,6 +122,8 @@ class Application(QtGui.QMainWindow):
                      self.on_open_menu)
         self.connect(self.actionSave, SIGNAL("triggered()"),
                      self.on_save_menu)
+        self.connect(self.action_About_Click_and_Mean, SIGNAL("triggered()"),
+                     self.on_about_menu)
 
     def prepare_axis(self):
         self.figure = self.mpl.canvas.fig
@@ -283,7 +285,11 @@ class Application(QtGui.QMainWindow):
         if self.index >0 :
             self.set_bacteria(self.index-1)
 
-
+    def on_about_menu(self):
+        QtGui.QMessageBox.about(self, "About Click and Mean",
+                                "<p><b>Click and Mean</b></p>"
+                                "<p>Bacteria rotation analysis</p>"
+                                "<p><em>(c) 2010 Antoine Sirinelli</em></p>")
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     my_app = Application('click_mean2.ui')
