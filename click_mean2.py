@@ -7,6 +7,7 @@ from PyQt4.QtCore import SIGNAL
 import sys, tables, os, csv
 import numpy as np
 import matplotlib.ticker as ticker
+import scipy.signal
 
 def smooth(x,window_len=11,window='hanning'):
     if x.ndim != 1:
@@ -107,6 +108,7 @@ class Application(QtGui.QMainWindow):
         self.treeWidget.setMaximumWidth(240)
 #        print self.treeWidget.width()
         self.last_clicked = None
+        self.changed = False
     def connect_signals(self):
         self.connect(self.Button_Add, SIGNAL("clicked()"),
                      self.on_button_add_clicked)
@@ -125,6 +127,20 @@ class Application(QtGui.QMainWindow):
         self.connect(self.action_About_Click_and_Mean, SIGNAL("triggered()"),
                      self.on_about_menu)
 
+    def closeEvent(self, event):
+        if self.changed:
+            reply = QtGui.QMessageBox.question(self, 'Quitting...',
+                                               "Your work has not been saved<p>Are you sure to quit?",
+                                               QtGui.QMessageBox.Yes,
+                                               QtGui.QMessageBox.No)
+
+            if reply == QtGui.QMessageBox.Yes:
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()
+
     def prepare_axis(self):
         self.figure = self.mpl.canvas.fig
 
@@ -140,7 +156,7 @@ class Application(QtGui.QMainWindow):
     def get_open_filename(self):    
         filename = QtGui.QFileDialog.getOpenFileName(self,
                                                      "Open File", QtCore.QDir.currentPath(),
-                                                     "HDF5 Files (*.h5)")
+                                                     "HDF5 Files (*.h5);;TXT files (*.txt)")
         if filename:
             return str(filename)
         else:
@@ -172,6 +188,7 @@ class Application(QtGui.QMainWindow):
                                  data['vfft'],
                                  format_min(data['start']),
                                  format_min(data['stop'])])
+        self.changed = False
 
     def get_save_filename(self, directory, filename):
         filesave = QtGui.QFileDialog.getSaveFileName(self,
@@ -184,21 +201,37 @@ class Application(QtGui.QMainWindow):
             return None
 
     def load_file(self, filename):
-        f = tables.openFile(filename, 'r')
-        self.IQ = f.root.IQ.read()
-        print self.IQ.shape
-        self.FPS = f.root.FPS.read()
-        self.nb_bacteria = self.IQ.shape[0]
-        f.close()
+        try:
+            f = tables.openFile(filename, 'r')
+            self.IQ = f.root.IQ.read()
+            print self.IQ.shape
+            self.FPS = f.root.FPS.read()
+            self.nb_bacteria = self.IQ.shape[0]
+            f.close()
+            self.filetype = 'H5'
+        except IOError:
+            data = np.loadtxt(filename, skiprows=1, unpack=True)
+            self.FPS = 50
+            self.nb_bacteria = (data.shape[0]-1)/2
+            self.IQ = np.empty((self.nb_bacteria, data.shape[1], 2))
+            for ii in range(self.nb_bacteria):
+                self.IQ[ii,:,0] = np.cos(data[2*ii+2]/180.*np.pi)
+                self.IQ[ii,:,1] = np.sin(data[2*ii+2]/180.*np.pi)
+            self.filetype = 'TXT'
         self.models = []
         for ii in range(self.nb_bacteria):
             self.models.append(BacteriaModel())
+        self.changed = False
 
     def set_bacteria(self, index):
         self.index = index
         self.label.setText("%d/%d"% (index, self.nb_bacteria-1))
         self.xc = self.IQ[index,:,0] + 1j *self.IQ[index,:,1]
         self.xc = self.xc -np.mean(self.xc)
+        if self.filetype is 'TXT':
+            # To be checked !
+            a,b = scipy.signal.butter(4, [0.01, 0.95],'bandpass')
+            self.xc = scipy.signal.filtfilt(a,b,self.xc)
         ph = np.unwrap(np.angle(self.xc))
         self.time = np.arange(len(ph), dtype=float)/self.FPS
         fact = self.FPS/2./np.pi
@@ -262,7 +295,7 @@ class Application(QtGui.QMainWindow):
             self.last_clicked = None
         else:
             self.last_clicked = event.xdata
-
+        self.changed=True
 
     def on_button_add_clicked(self):
         for widget in [self.Button_Add, self.Button_Delete, self.treeWidget]:
@@ -276,7 +309,8 @@ class Application(QtGui.QMainWindow):
         for ind in selected:
             if ind.column() == 0:
                 self.models[self.index].remove(ind.row())
-    
+        self.changed = True
+
     def on_button_next_clicked(self):
         if (self.index + 1) < self.nb_bacteria:
             self.set_bacteria(self.index+1)
