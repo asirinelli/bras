@@ -173,7 +173,7 @@ class Application(QtGui.QMainWindow):
                                            os.path.splitext(os.path.split(self.filename)[1])[0] + '.csv')
         if file_save == None:
             return
-        writer = csv.writer(open(file_save, 'w'))
+        writer = csv.writer(open(file_save, 'wb'))
         writer.writerow([os.path.split(self.filename)[1]])
         writer.writerow(['Bact.', 'start', 'stop', 'dt', 'v', 'v2', 'vfft',
                          'start', 'stop'])
