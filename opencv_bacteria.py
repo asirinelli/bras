@@ -5,6 +5,25 @@ import tables
 
 FONT = cv.InitFont(cv.CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5)
 
+# Keys used for the windows
+
+STOP_INTERACTIVE = (113, 1048689) # q
+MOVE_LEFT = (65361, 2424832, 1113937)
+MOVE_UP = (65362, 2490368, 1113938)
+MOVE_RIGHT = (65363, 2555904,1113939)
+MOVE_DOWN = (65364, 2621440, 1113940)
+DECREASE_WINDOW = (45,1048621, 1114029) # -
+INCREASE_WINDOW = (43, 65579, 1114155, 1114027) # +
+INCREASE_THRESHOLD = (116, 1048692) # t
+DECREASE_THRESHOLD = (103, 1048679) # g
+SELECT_WINDOW = (32, 1048608) # <space>
+REMOVE_WINDOW = (8, 65288, 1113864) # <backspace>
+JUMP_TO_0 = (122, 119, 1048698) # z or w
+JUMP_TO_0_25 = (120, 1048696) # x
+JUMP_TO_0_50 = (99, 1048675) # c
+JUMP_TO_0_75 = (118, 1048694) # v
+
+
 class window:
     def __init__(self, x, y, width, height, threshold=None):
         self.x = x
@@ -159,47 +178,47 @@ def set_windows(capture, windows_list=[]):
         if k is str:
             k=ord(k)
         if k > 0:
-            if k == 113: # q
-                print 'q pressed. Exiting ...'
+            if k in STOP_INTERACTIVE:
+                print 'Starting analysis...'
                 break
-            elif k == 65361 or k == 2424832: # left
+            elif k in MOVE_LEFT:
                 x -= 1
-            elif k == 65362 or k == 2490368: # Up
+            elif k in MOVE_UP:
                 y -= 1
-            elif k == 65363 or k == 2555904: # Right
+            elif k in MOVE_RIGHT:
                 x += 1
-            elif k == 65364 or k == 2621440: # Down
+            elif k in MOVE_DOWN:
                 y += 1
-            elif k == 45: # -
+            elif k in DECREASE_WINDOW:
                 height -= 2
                 width -= 2
-            elif k == 43 or k == 65579: # +
+            elif k in INCREASE_WINDOW:
                 height += 2
                 width += 2
-            elif k == 103: # g
+            elif k in DECREASE_THRESHOLD:
               threshold -= 2
-            elif k == 116: # t
+            elif k in INCREASE_THRESHOLD:
               threshold += 2
-            elif k == 32: # space 
+            elif k in SELECT_WINDOW:
                 windows_list.append(window(x, y, width, height, threshold))
-            elif k == 8 or k == 65288: # Backspace
+            elif k in REMOVE_WINDOW:
                 if windows_list:
                     windows_list.pop()
-            elif k == 122 or k == 119: # z or w
+            elif k in JUMP_TO_0:
                 cv.SetCaptureProperty(capture,
                                       cv.CV_CAP_PROP_POS_FRAMES, 0)
                 print "Frame 0/%d"%(nb_frames)
-            elif k == 120: # x
+            elif k in JUMP_TO_0_25:
                 cv.SetCaptureProperty(capture,
                                       cv.CV_CAP_PROP_POS_FRAMES,
                                       int(nb_frames/4))
                 print "Frame %d/%d"%(int(nb_frames/4), nb_frames)
-            elif k == 99: # c
+            elif k in JUMP_TO_0_50:
                 cv.SetCaptureProperty(capture,
                                       cv.CV_CAP_PROP_POS_FRAMES,
                                       int(nb_frames/2))
                 print "Frame %d/%d"%(int(nb_frames/2), nb_frames)
-            elif k == 118: # v
+            elif k in JUMP_TO_0_75:
                 cv.SetCaptureProperty(capture,
                                       cv.CV_CAP_PROP_POS_FRAMES,
                                       int(3*nb_frames/4))
@@ -267,7 +286,7 @@ if __name__ == "__main__":
     avifile = sys.argv[1]
     fps = int(sys.argv[2])
     if len(sys.argv) > 3:
-        windowsfile = sys.arg[3]
+        windowsfile = sys.argv[3]
     else:
         windowsfile = None
     h5file = run_analysis(avifile, fps, windowsfile)

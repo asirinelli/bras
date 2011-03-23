@@ -1,20 +1,25 @@
 #!/usr/bin/env python
 
-from PyQt4 import QtGui, QtCore, uic
+from PyQt4 import QtGui, QtCore
 import sys
 from opencv_bacteria import run_analysis
 from plot_phase import plot_phase
-
+from ui_dialog import Ui_FPS
 app = QtGui.QApplication(sys.argv)
 
-dialog = uic.loadUi('dialog.ui')
 filename = QtGui.QFileDialog.getOpenFileName(None, "Open movie file...",
                                              QtCore.QDir.currentPath(),
                                              "Movie (*.avi)")
 if not filename:
     sys.exit()
 filename = str(filename)
-dialog.setWindowTitle(filename)
+class dialog_FPS(QtGui.QDialog, Ui_FPS):
+    def __init__(self, title):
+        QtGui.QDialog.__init__(self)
+        self.setupUi(self)
+        self.setWindowTitle(title)
+
+dialog = dialog_FPS(filename)
 if not dialog.exec_():
     sys.exit()
 fps = int(dialog.lineEdit.text())

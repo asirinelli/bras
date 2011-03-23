@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from PyQt4 import QtGui, uic, QtCore, Qt
+from PyQt4 import QtGui, QtCore, Qt
 from PyQt4.QtCore import SIGNAL
-# from ui_click_mean2 import Ui_MainWindow
+from ui_click_mean2 import Ui_MainWindow
 
 import sys, tables, os, csv
 import numpy as np
@@ -94,18 +94,18 @@ class BacteriaModel(QtCore.QAbstractItemModel):
         else:
             return None
 
-class Application(QtGui.QMainWindow):
-    def __init__(self, uifile):
+class Application(QtGui.QMainWindow, Ui_MainWindow):
+    def __init__(self):
         QtGui.QMainWindow.__init__(self)
 #        Ui_MainWindow.__init__(self)
-        uic.loadUi(uifile, self)
-#        self.setupUi(self)
+#        uic.loadUi(uifile, self)
+        self.setupUi(self)
         self.treeWidget.setIndentation(0)
         self.treeWidget.setModel(BacteriaModel())
         for ii in range(5):
             self.treeWidget.setColumnWidth(ii, 45)
         self.treeWidget.setMinimumWidth(210)
-        self.treeWidget.setMaximumWidth(240)
+#        self.treeWidget.setMaximumWidth(240)
 #        print self.treeWidget.width()
         self.last_clicked = None
         self.changed = False
@@ -326,7 +326,7 @@ class Application(QtGui.QMainWindow):
                                 "<p><em>(c) 2010 Antoine Sirinelli</em></p>")
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
-    my_app = Application('click_mean2.ui')
+    my_app = Application()
     my_app.connect_signals()
     my_app.prepare_axis()
     my_app.show()
