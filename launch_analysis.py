@@ -1,10 +1,30 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Script to launch the video analyser.
+# Copyright (C) 2010-2011 Antoine Sirinelli
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+# USA.
 
 from PyQt4 import QtGui, QtCore
 import sys
 from opencv_bacteria import run_analysis
 from plot_phase import plot_phase
 from ui_dialog import Ui_FPS
+
 app = QtGui.QApplication(sys.argv)
 
 filename = QtGui.QFileDialog.getOpenFileName(None, "Open movie file...",
@@ -13,6 +33,7 @@ filename = QtGui.QFileDialog.getOpenFileName(None, "Open movie file...",
 if not filename:
     sys.exit()
 filename = str(filename)
+
 
 class dialog_FPS(QtGui.QDialog):
     def __init__(self, title):
@@ -24,7 +45,7 @@ class dialog_FPS(QtGui.QDialog):
         verticalLayout.addWidget(self.lineEdit)
         buttonBox = QtGui.QDialogButtonBox()
         buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel | 
+        buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel |
                                      QtGui.QDialogButtonBox.Ok)
         verticalLayout.addWidget(buttonBox)
         self.setLayout(verticalLayout)
@@ -33,6 +54,7 @@ class dialog_FPS(QtGui.QDialog):
         self.connect(buttonBox, QtCore.SIGNAL("rejected()"), self.reject)
         self.connect(self.lineEdit, QtCore.SIGNAL("returnPressed()"),
                      self.accept)
+
 
 class dialog_help(QtGui.QDialog):
     def __init__(self, text):
@@ -61,10 +83,11 @@ ret = QtGui.QMessageBox.question(None, "Configuration file",
                                  QtGui.QMessageBox.No)
 
 if ret == QtGui.QMessageBox.Yes:
-    config_filename = QtGui.QFileDialog.getOpenFileName(None,
-                                                        "Open configuration file",
-                                                        QtCore.QFileInfo(filename).path(),
-                                                        "Configuration file (*.txt)")
+    config_filename = \
+        QtGui.QFileDialog.getOpenFileName(None,
+                                          "Open configuration file",
+                                          QtCore.QFileInfo(filename).path(),
+                                          "Configuration file (*.txt)")
     config_filename = str(config_filename)
 else:
     config_filename = None
@@ -80,7 +103,7 @@ help_text = """<b>Keys used for video analysis</b><br>
 """
 
 help = dialog_help(help_text)
-help.show();
+help.show()
 
 h5file = run_analysis(filename, fps, config_filename)
 plot_phase(h5file)
