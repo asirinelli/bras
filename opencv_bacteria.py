@@ -269,7 +269,7 @@ def set_windows(capture, windows_list=[]):
         if threshold > 256:
             threshold = 256
 
-            window_placement(frame, x, y, width, height, cv.CV_RGB(0, 255, 0))
+        window_placement(frame, x, y, width, height, cv.CV_RGB(0, 255, 0))
         # display image
         cv.ShowImage('Film', frame)
 
