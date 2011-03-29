@@ -23,7 +23,6 @@ from PyQt4 import QtGui, QtCore
 import sys
 from opencv_bacteria import run_analysis
 from plot_phase import plot_phase
-from ui_dialog import Ui_FPS
 
 app = QtGui.QApplication(sys.argv)
 
