@@ -40,3 +40,10 @@ Windows
 
 
 
+..
+   Local Variables:
+   mode: rst
+   mode: auto-fill
+   mode: ispell-minor
+   ispell-dictionary: "british"
+   End:

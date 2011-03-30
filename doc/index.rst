@@ -16,6 +16,21 @@ Contents:
    download
    licence
 
+These programs have been designed within a project carried out in the
+`Oxford Centre for Integrative Systems Biology
+<http://www.sysbio.ox.ac.uk/>`_ (`University of Oxford
+<http://www.ox.ac.uk/>`_)
+
+.. image:: sysbio.png
+   :target: http://www.sysbio.ox.ac.uk/
+   :align: right
+   :height: 100pt
+.. image:: oxlogo.png
+   :target: http://www.ox.ac.uk/
+   :align: right
+   :height: 100pt
+
+
 
 .. Indices and tables
 .. ==================
