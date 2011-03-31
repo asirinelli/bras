@@ -12,7 +12,7 @@ This software distribution is composed of three distinct programs:
 
 * **Video Player**: A frame by frame video player.
 
-These softwares have been written in Python using free softwares by
+These software have been written in Python using free software by
 `Antoine Sirinelli`_ for the `Oxford Centre for Integrative Systems
 Biology`_. They have been used in the following publications:
 

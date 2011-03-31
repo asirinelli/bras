@@ -49,7 +49,7 @@ The active window is in green while the already selected ones are in
 red. You can move the active window using the arrow keys and change
 its size. One important parameter is the contrast threshold: it is
 used to isolate the bacteria from the video background. When correctly
-set, you should see cleary the the bacteria in grey/white while the
+set, you should see clearly the the bacteria in grey/white while the
 background should be black. When the position, the size and the
 contrast of the active window are set, you can store this setting with
 the space bar and select another bacteria.
@@ -80,7 +80,7 @@ directory:
   overlayed.
 * The first analysis **plots** displayed at the end of the processing.
 
-**HDF5** files can be opened by most of the data processing softwares
+**HDF5** files can be opened by most of the data processing software
 or languages: Python (using `PyTables`_ or `h5py`_), `R`_, `Octave`_,
 `Matlab`_, IDL, LabView, `Mathematica`_... This file is used by *Click
 & Mean* for the subsequent analysis.
