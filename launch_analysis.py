@@ -19,14 +19,14 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
 # USA.
 
-from PyQt4 import QtGui, QtCore
+from PyQt6 import QtCore, QtWidgets
 import sys
 from opencv_bacteria import run_analysis
 from plot_phase import plot_phase
 
-app = QtGui.QApplication(sys.argv)
+app = QtWidgets.QApplication(sys.argv)
 
-filename = QtGui.QFileDialog.getOpenFileName(None, "Open movie file...",
+filename, filetype = QtWidgets.QFileDialog.getOpenFileName(None, "Open movie file...",
                                              QtCore.QDir.currentPath(),
                                              "Movie (*.avi)")
 if not filename:
@@ -34,56 +34,55 @@ if not filename:
 filename = str(filename)
 
 
-class dialog_FPS(QtGui.QDialog):
+class dialog_FPS(QtWidgets.QDialog):
     def __init__(self, title):
-        QtGui.QDialog.__init__(self)
-        verticalLayout = QtGui.QVBoxLayout()
-        label = QtGui.QLabel("Please enter the Frames-per-Second value used")
+        QtWidgets.QDialog.__init__(self)
+        verticalLayout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QLabel("Please enter the Frames-per-Second value used")
         verticalLayout.addWidget(label)
-        self.lineEdit = QtGui.QLineEdit()
+        self.lineEdit = QtWidgets.QLineEdit()
         verticalLayout.addWidget(self.lineEdit)
-        buttonBox = QtGui.QDialogButtonBox()
-        buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel |
-                                     QtGui.QDialogButtonBox.Ok)
+        buttonBox = QtWidgets.QDialogButtonBox()
+        buttonBox.setOrientation(QtCore.Qt.Orientation.Horizontal)
+        buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.StandardButton.Cancel |
+                                     QtWidgets.QDialogButtonBox.StandardButton.Ok)
         verticalLayout.addWidget(buttonBox)
         self.setLayout(verticalLayout)
         self.setWindowTitle(title)
-        self.connect(buttonBox, QtCore.SIGNAL("accepted()"), self.accept)
-        self.connect(buttonBox, QtCore.SIGNAL("rejected()"), self.reject)
-        self.connect(self.lineEdit, QtCore.SIGNAL("returnPressed()"),
-                     self.accept)
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+        self.lineEdit.returnPressed.connect(self.accept)
 
 
-class dialog_help(QtGui.QDialog):
+class dialog_help(QtWidgets.QDialog):
     def __init__(self, text):
-        QtGui.QDialog.__init__(self)
-        verticalLayout = QtGui.QVBoxLayout()
-        label = QtGui.QLabel(text)
+        QtWidgets.QDialog.__init__(self)
+        verticalLayout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QLabel(text)
         verticalLayout.addWidget(label)
-        buttonBox = QtGui.QDialogButtonBox()
-        buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Ok)
+        buttonBox = QtWidgets.QDialogButtonBox()
+        buttonBox.setOrientation(QtCore.Qt.Orientation.Horizontal)
+        buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.StandardButton.Ok)
         verticalLayout.addWidget(buttonBox)
         self.setLayout(verticalLayout)
         self.setWindowTitle("Help")
-        self.connect(buttonBox, QtCore.SIGNAL("accepted()"), self.accept)
+        buttonBox.accepted.connect(self.accept)
 
 
 dialog = dialog_FPS(filename)
-if not dialog.exec_():
+if not dialog.exec():
     sys.exit()
 fps = int(dialog.lineEdit.text())
 
 
-ret = QtGui.QMessageBox.question(None, "Configuration file",
+ret = QtWidgets.QMessageBox.question(None, "Configuration file",
                                  "Do you have a configuration file ?",
-                                 QtGui.QMessageBox.No | QtGui.QMessageBox.Yes,
-                                 QtGui.QMessageBox.No)
+                                 QtWidgets.QMessageBox.StandardButton.No | QtWidgets.QMessageBox.StandardButton.Yes,
+                                 QtWidgets.QMessageBox.StandardButton.No)
 
-if ret == QtGui.QMessageBox.Yes:
-    config_filename = \
-        QtGui.QFileDialog.getOpenFileName(None,
+if ret == QtWidgets.QMessageBox.StandardButton.Yes:
+    config_filename, filetype = \
+        QtWidgets.QFileDialog.getOpenFileName(None,
                                           "Open configuration file",
                                           QtCore.QFileInfo(filename).path(),
                                           "Configuration file (*.txt)")

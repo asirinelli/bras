@@ -20,7 +20,7 @@
 # USA.
 
 import matplotlib
-matplotlib.use('Qt4Agg')
+matplotlib.use('QtAgg')
 import pylab as P
 import numpy as N
 import sys
@@ -57,7 +57,7 @@ def smooth(x, window_len=11, window='hanning'):
 
 
 def plot_phase(h5file):
-    f = tables.openFile(h5file, 'r')
+    f = tables.open_file(h5file, 'r')
     IQ = f.root.IQ.read()
     FPS = f.root.FPS.read()
     f.close()
@@ -84,7 +84,7 @@ def plot_phase(h5file):
         ax3 = P.subplot(223, sharex=ax2)
         fact = FPS / 2. / N.pi
         P.plot(time[:-1], fact * N.diff(ph))
-        P.plot(time[:-1], fact * smooth(N.diff(ph), FPS / 10), lw=2)
+        P.plot(time[:-1], fact * smooth(N.diff(ph), int(FPS / 10)), lw=2)
         P.grid()
         P.xlabel('time (s)')
         P.ylabel('Rotation per second')

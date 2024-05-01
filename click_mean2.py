@@ -19,8 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
 # USA.
 
-from PyQt4 import QtGui, QtCore, Qt
-from PyQt4.QtCore import SIGNAL
+from PyQt6 import QtCore, QtWidgets
 from ui_click_mean2 import Ui_MainWindow
 
 import sys
@@ -95,7 +94,7 @@ class BacteriaModel(QtCore.QAbstractItemModel):
     def data(self, index, role):
         if not index.isValid():
             return None
-        if role != QtCore.Qt.DisplayRole:
+        if role != QtCore.Qt.ItemDataRole.DisplayRole:
             return None
         c = self.column_data[index.column()]
         r = index.row()
@@ -117,18 +116,18 @@ class BacteriaModel(QtCore.QAbstractItemModel):
         self.dataset.pop(row)
         self.endRemoveRows()
 
-    def headerData(self, section, orientation, role=Qt.Qt.DisplayRole):
-        if role != Qt.Qt.DisplayRole:
+    def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if role != QtCore.Qt.ItemDataRole.DisplayRole:
             return None
-        if orientation == Qt.Qt.Horizontal:
+        if orientation == QtCore.Qt.Orientation.Horizontal:
             return self.headers[section]
         else:
             return None
 
 
-class Application(QtGui.QMainWindow, Ui_MainWindow):
+class Application(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
-        QtGui.QMainWindow.__init__(self)
+        QtWidgets.QMainWindow.__init__(self)
 #        Ui_MainWindow.__init__(self)
 #        uic.loadUi(uifile, self)
         self.setupUi(self)
@@ -143,32 +142,23 @@ class Application(QtGui.QMainWindow, Ui_MainWindow):
         self.changed = False
 
     def connect_signals(self):
-        self.connect(self.Button_Add, SIGNAL("clicked()"),
-                     self.on_button_add_clicked)
-
-        self.connect(self.Button_Delete, SIGNAL("clicked()"),
-                     self.on_button_del_clicked)
-
-        self.connect(self.Button_Back, SIGNAL("clicked()"),
-                     self.on_button_previous_clicked)
-        self.connect(self.Button_Forward, SIGNAL("clicked()"),
-                     self.on_button_next_clicked)
-        self.connect(self.actionOpen, SIGNAL("triggered()"),
-                     self.on_open_menu)
-        self.connect(self.actionSave, SIGNAL("triggered()"),
-                     self.on_save_menu)
-        self.connect(self.action_About_Click_and_Mean, SIGNAL("triggered()"),
-                     self.on_about_menu)
+        self.Button_Add.clicked.connect(self.on_button_add_clicked)
+        self.Button_Delete.clicked.connect(self.on_button_del_clicked)
+        self.Button_Back.clicked.connect(self.on_button_previous_clicked)
+        self.Button_Forward.clicked.connect(self.on_button_next_clicked)
+        self.actionOpen.triggered.connect(self.on_open_menu)
+        self.actionSave.triggered.connect(self.on_save_menu)
+        self.action_About_Click_and_Mean.triggered.connect(self.on_about_menu)
 
     def closeEvent(self, event):
         if self.changed:
             query = "Your work has not been saved<p>Are you sure to quit?"
-            reply = QtGui.QMessageBox.question(self, 'Quitting...',
+            reply = QtWidgets.QMessageBox.question(self, 'Quitting...',
                                                query,
-                                               QtGui.QMessageBox.Yes,
-                                               QtGui.QMessageBox.No)
+                                               QtWidgets.QMessageBox.StandardButton.Yes,
+                                               QtWidgets.QMessageBox.StandardButton.No)
 
-            if reply == QtGui.QMessageBox.Yes:
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 event.accept()
             else:
                 event.ignore()
@@ -189,7 +179,7 @@ class Application(QtGui.QMainWindow, Ui_MainWindow):
 
     def get_open_filename(self):
         types = "HDF5 Files (*.h5);;TXT files (*.txt)"
-        filename = QtGui.QFileDialog.getOpenFileName(self,
+        filename, filetype = QtWidgets.QFileDialog.getOpenFileName(self,
                                                      "Open File",
                                                      QtCore.QDir.currentPath(),
                                                      types)
@@ -210,7 +200,7 @@ class Application(QtGui.QMainWindow, Ui_MainWindow):
                                            default)
         if file_save == None:
             return
-        writer = csv.writer(open(file_save, 'wb'))
+        writer = csv.writer(open(file_save, 'w'))
         writer.writerow([os.path.split(self.filename)[1]])
         writer.writerow(['Bact.', 'start', 'stop', 'dt', 'v', 'v2', 'vfft',
                          'start', 'stop'])
@@ -228,7 +218,7 @@ class Application(QtGui.QMainWindow, Ui_MainWindow):
         self.changed = False
 
     def get_save_filename(self, directory, filename):
-        filesave = QtGui.QFileDialog.getSaveFileName(self,
+        filesave, filetype = QtWidgets.QFileDialog.getSaveFileName(self,
                                                      "Save File",
                                                      directory,
                                                      "CSV Files (*.csv)")
@@ -239,9 +229,9 @@ class Application(QtGui.QMainWindow, Ui_MainWindow):
 
     def load_file(self, filename):
         try:
-            f = tables.openFile(filename, 'r')
+            f = tables.open_file(filename, 'r')
             self.IQ = f.root.IQ.read()
-            print self.IQ.shape
+            print(self.IQ.shape)
             self.FPS = f.root.FPS.read()
             self.nb_bacteria = self.IQ.shape[0]
             f.close()
@@ -265,7 +255,7 @@ class Application(QtGui.QMainWindow, Ui_MainWindow):
         self.label.setText("%d/%d" % (index, self.nb_bacteria - 1))
         self.xc = self.IQ[index, :, 0] + 1j * self.IQ[index, :, 1]
         self.xc = self.xc - np.mean(self.xc)
-        if self.filetype is 'TXT':
+        if self.filetype == 'TXT':
             # To be checked !
             a, b = scipy.signal.butter(4, [0.01, 0.95], 'bandpass')
             self.xc = scipy.signal.filtfilt(a, b, self.xc)
@@ -309,7 +299,7 @@ class Application(QtGui.QMainWindow, Ui_MainWindow):
             ind1, ind2 = np.searchsorted(self.time,
                                          [self.last_clicked, event.xdata])
             if ind1 > ind2:
-                QtGui.QMessageBox.warning(\
+                QtWidgets.QMessageBox.warning(\
                     self, u'Invalid input',
                     u'Your second point is before your first point!')
             else:
@@ -361,14 +351,14 @@ class Application(QtGui.QMainWindow, Ui_MainWindow):
             self.set_bacteria(self.index - 1)
 
     def on_about_menu(self):
-        QtGui.QMessageBox.about(self, "About Click and Mean",
+        QtWidgets.QMessageBox.about(self, "About Click and Mean",
                                 "<p><b>Click and Mean</b></p>"
                                 "<p>Bacteria rotation analysis</p>"
                                 "<p><em>(c) 2010 Antoine Sirinelli</em></p>")
 if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     my_app = Application()
     my_app.connect_signals()
     my_app.prepare_axis()
     my_app.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

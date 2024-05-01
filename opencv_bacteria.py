@@ -22,20 +22,18 @@
 import sys
 import os
 import time
-import cv
+import cv2 as cv
 import numpy as np
 import tables
 
 
-FONT = cv.InitFont(cv.CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5)
-
 # Keys used for the windows
 
 STOP_INTERACTIVE = (113, 1048689)  # q
-MOVE_LEFT = (65361, 2424832, 1113937)
-MOVE_UP = (65362, 2490368, 1113938)
-MOVE_RIGHT = (65363, 2555904, 1113939)
-MOVE_DOWN = (65364, 2621440, 1113940)
+MOVE_LEFT = (81, )
+MOVE_UP = (82, )
+MOVE_RIGHT = (83, )
+MOVE_DOWN = (84, )
 DECREASE_WINDOW = (45, 1048621, 1114029)  # -
 INCREASE_WINDOW = (43, 65579, 1114155, 1114027)  # +
 INCREASE_THRESHOLD = (116, 1048692)  # t
@@ -79,7 +77,7 @@ def windows_to_h5(windows, table):
 
 
 def save_config(windows, name):
-    out = file(name, 'w')
+    out = open(name, 'w')
     for w in windows:
         out.write('%d\t%d\t%d\t%d\t%d\n' %
                   (w.x, w.y, w.width, w.height, w.threshold))
@@ -87,7 +85,7 @@ def save_config(windows, name):
 
 
 def read_config(name):
-    f = file(name, 'r')
+    f = open(name, 'r')
     out = []
     for line in f:
         l = [int(ii) for ii in line.split()]
@@ -96,17 +94,16 @@ def read_config(name):
 
 
 def window_placement(image, x, y, width, height, color, nb=None):
-    cv.Rectangle(image, (x, y),
+    cv.rectangle(image, (x, y),
                  (x + width, y + height),
                  color, 1, 8, 0)
     if nb != None:
-        cv.PutText(image, '%0d' % nb, (x + width + 2, y + height / 2),
-                   FONT, color)
+        cv.putText(image, '%0d' % nb, (int(x + width + 2), int(y + height / 2)),
+                   cv.FONT_HERSHEY_SIMPLEX, 0.5, color)
 
 
 def get_IQ(capture, windows):
-    nb_frames = int(cv.GetCaptureProperty(capture,
-                                          cv.CV_CAP_PROP_FRAME_COUNT))
+    nb_frames = int(capture.get(cv.CAP_PROP_FRAME_COUNT))
 #  data = [np.empty((nb_frames, 2))]*len(windows)
     data = np.empty((len(windows), nb_frames, 2))
     crop_gray = []
@@ -114,61 +111,63 @@ def get_IQ(capture, windows):
     matX = []
     matY = []
     for w in windows:
-        crop_gray.append(cv.CreateMat(w.height, w.width, cv.CV_8UC1))
+        #crop_gray.append(cv.CreateMat(w.height, w.width, cv.CV_8UC1))
+        crop_gray.append(np.zeros((w.height, w.width), dtype=np.int8))
         crop_rect.append((w.x, w.y, w.width, w.height))
         mx, my = np.meshgrid(np.arange(w.width), np.arange(w.height))
         matX.append(mx)
         matY.append(my)
 
-    cv.NamedWindow('Monitor', cv.CV_WINDOW_AUTOSIZE)
+    cv.namedWindow('Monitor', cv.WINDOW_AUTOSIZE)
 
-    for fi in xrange(nb_frames):
-        image = cv.QueryFrame(capture)
-        for ii in xrange(len(windows)):
+    for fi in range(nb_frames):
+        ret, image = capture.read()
+        for ii in range(len(windows)):
             crop2 = crop_gray[ii]
-            crop = cv.GetSubRect(image, crop_rect[ii])
-            cv.CvtColor(crop, crop2, cv.CV_RGB2GRAY)
-            cv.Not(crop2, crop2)
-            cv.Threshold(crop2, crop2, windows[ii].threshold, 0,
-                         cv.CV_THRESH_TOZERO)
+            wx1, wx2 = crop_rect[ii][0], crop_rect[ii][0] + crop_rect[ii][2]
+            wy1, wy2 = crop_rect[ii][1], crop_rect[ii][1] + crop_rect[ii][3]
+            crop = np.invert(image[wy1:wy2, wx1:wx2, 0])
+            crop = (crop > windows[ii].threshold) * crop
+            # cv.Threshold(crop2, crop2, windows[ii].threshold, 0,
+            #              cv.CV_THRESH_TOZERO)
 #      arr = np.asarray(crop2, dtype='int')#[:,:,0]
-            arr = np.fromstring(crop2.tostring(), dtype=np.uint8)
-            arr.resize((crop2.rows, crop2.cols))
+            # arr = np.fromstring(crop2.tostring(), dtype=np.uint8)
+            # arr.resize((crop2.rows, crop2.cols))
 #      matX, matY = np.meshgrid(range(arr.shape[0]),
 #                               range(arr.shape[1]))
 
-            M00 = np.sum(arr)
+            M00 = np.sum(crop)
             if M00 == 0:
-                print "No pixel found (frame: %d, window: %d)" % (fi, ii)
+                print("No pixel found (frame: %d, window: %d)" % (fi, ii))
                 M00 = 1
-            M10 = np.sum(matX[ii] * arr)
-            M01 = np.sum(matY[ii] * arr)
+            M10 = np.sum(matX[ii] * crop)
+            M01 = np.sum(matY[ii] * crop)
             X = float(M10) / float(M00)
             Y = float(M01) / float(M00)
 #      data[ii][fi] = [X, Y]
             data[ii, fi] = np.array([X, Y])
 
         if fi % 1000 == 0:
-            print fi
+            print(fi)
             for jj, w in enumerate(windows):
                 window_placement(image, w.x, w.y, w.width, w.height,
-                                 cv.CV_RGB(255, 0, 0), jj)
-            cv.PutText(image, '%7d/%d' % (fi, nb_frames), (2, 20),
-                       FONT, cv.CV_RGB(255, 0, 0))
-            cv.ShowImage('Monitor', image)
-            cv.WaitKey(10)
+                                 (255, 0, 0), jj)
+            cv.putText(image, '%7d/%d' % (fi, nb_frames), (2, 20),
+                       cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0))
+            cv.imshow('Monitor', image)
+            cv.waitKey(10)
 
 #    print M00, norm, M10, M01, X, Y
 #    cv.cvCircle(crop, cv.cvPoint(int(X), int(Y)),
 #                2, cv.CV_RGB(0, 255, 0), -1, 8, 0)
 #    print A, B, C, D, X, Y
-    cv.DestroyWindow('Monitor')
+    cv.destroyWindow('Monitor')
     return data
 
 
 def set_windows(capture, windows_list=[]):
     # create windows
-    cv.NamedWindow('Film', cv.CV_WINDOW_AUTOSIZE)
+    cv.namedWindow('Film', cv.WINDOW_AUTOSIZE)
     if windows_list:
         threshold = windows_list[-1].threshold
     else:
@@ -177,40 +176,36 @@ def set_windows(capture, windows_list=[]):
     y = 100
     height = 20
     width = 20
-    cap_height = int(cv.GetCaptureProperty(capture,
-                                           cv.CV_CAP_PROP_FRAME_HEIGHT))
-    cap_width = int(cv.GetCaptureProperty(capture,
-                                          cv.CV_CAP_PROP_FRAME_WIDTH))
-    nb_frames = cv.GetCaptureProperty(capture,
-                                      cv.CV_CAP_PROP_FRAME_COUNT)
+    cap_height = int(capture.get(cv.CAP_PROP_FRAME_HEIGHT))
+    cap_width = int(capture.get(cv.CAP_PROP_FRAME_WIDTH))
+    nb_frames = capture.get(cv.CAP_PROP_FRAME_COUNT)
 
 #    frame_gray = cv.cvCreateMat(cap_height, cap_width, cv.CV_8UC1)
     while 1:
         # capture the current frame
-        frame = cv.QueryFrame(capture)
+        ret, frame = capture.read()
         if frame is None:
-            cv.SetCaptureProperty(capture,
-                                  cv.CV_CAP_PROP_POS_FRAMES, 0)
-            frame = cv.QueryFrame(capture)
+            capture.set(cv.CAP_PROP_POS_FRAMES, 0)
+            ret, frame = capture.read()
 
         # cv.cvCvtColor(frame, frame_gray, cv.CV_RGB2GRAY)
         # We take the negative
-        cv.Not(frame, frame)
+        frame = cv.bitwise_not(frame)
         # We put a threshold
-        cv.Threshold(frame, frame, threshold, 0, cv.CV_THRESH_TOZERO)
+        ret, frame = cv.threshold(frame, threshold, 0, cv.THRESH_TOZERO)
 
         # place the window
         for ii, w in enumerate(windows_list):
             window_placement(frame, w.x, w.y, w.width, w.height,
-                             cv.CV_RGB(255, 0, 0), ii)
+                             (255, 0, 0), ii)
 
         # handle events
-        k = cv.WaitKey(10)
+        k = cv.waitKey(10)
         if k is str:
             k = ord(k)
         if k > 0:
             if k in STOP_INTERACTIVE:
-                print 'Starting analysis...'
+                print('Starting analysis...')
                 break
             elif k in MOVE_LEFT:
                 x -= 1
@@ -236,26 +231,19 @@ def set_windows(capture, windows_list=[]):
                 if windows_list:
                     windows_list.pop()
             elif k in JUMP_TO_0:
-                cv.SetCaptureProperty(capture,
-                                      cv.CV_CAP_PROP_POS_FRAMES, 0)
-                print "Frame 0/%d" % (nb_frames)
+                capture.set(cv.CAP_PROP_POS_FRAMES, 0)
+                print("Frame 0/%d" % (nb_frames))
             elif k in JUMP_TO_0_25:
-                cv.SetCaptureProperty(capture,
-                                      cv.CV_CAP_PROP_POS_FRAMES,
-                                      int(nb_frames / 4))
-                print "Frame %d/%d" % (int(nb_frames / 4), nb_frames)
+                capture.set(cv.CAP_PROP_POS_FRAMES, int(nb_frames / 4))
+                print("Frame %d/%d" % (int(nb_frames / 4), nb_frames))
             elif k in JUMP_TO_0_50:
-                cv.SetCaptureProperty(capture,
-                                      cv.CV_CAP_PROP_POS_FRAMES,
-                                      int(nb_frames / 2))
-                print "Frame %d/%d" % (int(nb_frames / 2), nb_frames)
+                capture.set(cv.CAP_PROP_POS_FRAMES, int(nb_frames / 2))
+                print("Frame %d/%d" % (int(nb_frames / 2), nb_frames))
             elif k in JUMP_TO_0_75:
-                cv.SetCaptureProperty(capture,
-                                      cv.CV_CAP_PROP_POS_FRAMES,
-                                      int(3 * nb_frames / 4))
-                print "Frame %d/%d" % (int(3 * nb_frames / 4), nb_frames)
+                capture.set(cv.CAP_PROP_POS_FRAMES, int(3 * nb_frames / 4))
+                print("Frame %d/%d" % (int(3 * nb_frames / 4), nb_frames))
             else:
-                print k
+                print(k)
         if x < 0:
             x = 0
         if y < 0:
@@ -269,32 +257,33 @@ def set_windows(capture, windows_list=[]):
         if threshold > 256:
             threshold = 256
 
-        window_placement(frame, x, y, width, height, cv.CV_RGB(0, 255, 0))
+        window_placement(frame, x, y, width, height, (0, 255, 0))
         # display image
-        cv.ShowImage('Film', frame)
+        cv.imshow('Film', frame)
 
-    cv.DestroyWindow('Film')
+    cv.destroyWindow('Film')
     return windows_list, frame
 
 
 def run_analysis(avifile, FPS, windowsfile=None):
     # create capture device
-    capture = cv.CreateFileCapture(avifile)
+    print(avifile)
+    capture = cv.VideoCapture(avifile)
     root, ext = os.path.splitext(avifile)
     root += time.strftime('_%Y-%m-%d_%Hh%M')
     config_file = root + '.txt'
     h5_file = root + '.h5'
     png_file = root + '.png'
 
-    nb_frames = cv.GetCaptureProperty(capture,
-                                      cv.CV_CAP_PROP_FRAME_COUNT)
-    print "Frame rate : %g fps" % \
-        cv.GetCaptureProperty(capture,
-                              cv.CV_CAP_PROP_FPS), FPS
-    print "Number of frames : %g" % nb_frames
+    nb_frames = capture.get(cv.CAP_PROP_FRAME_COUNT)
+
+    print("Frame rate : %g fps" % \
+        capture.get(cv.CAP_PROP_FPS), FPS)
+
+    print("Number of frames : %g" % nb_frames)
     # check if capture device is OK
-    if not capture:
-        print "Error opening capture device"
+    if not capture.isOpened():
+        print("Error opening capture device")
         sys.exit(1)
 
     if windowsfile:
@@ -303,15 +292,15 @@ def run_analysis(avifile, FPS, windowsfile=None):
     else:
         windows_list, frame = set_windows(capture)
     save_config(windows_list, config_file)
-    cv.SaveImage(png_file, frame)
-    cv.SetCaptureProperty(capture, cv.CV_CAP_PROP_POS_FRAMES, 0)
+    cv.imwrite(png_file, frame)
+    capture.set(cv.CAP_PROP_POS_FRAMES, 0)
 
     data = get_IQ(capture, windows_list)
-    out = tables.openFile(h5_file, 'w', title=avifile)
-    out.createArray('/', 'IQ', data, title='Position of bacteria centre')
-    out.createArray('/', 'FPS', FPS, title='Frames per second')
+    out = tables.open_file(h5_file, 'w', title=avifile)
+    out.create_array('/', 'IQ', data, title='Position of bacteria centre')
+    out.create_array('/', 'FPS', FPS, title='Frames per second')
     table_windows = \
-        out.createTable('/', 'windows', h5_window, 'Windows used in video')
+        out.create_table('/', 'windows', h5_window, 'Windows used in video')
     windows_to_h5(windows_list, table_windows)
     out.close()
     return h5_file
