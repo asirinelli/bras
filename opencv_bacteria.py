@@ -30,10 +30,10 @@ import tables
 # Keys used for the windows
 
 STOP_INTERACTIVE = (113, 1048689)  # q
-MOVE_LEFT = (81, )
-MOVE_UP = (82, )
-MOVE_RIGHT = (83, )
-MOVE_DOWN = (84, )
+MOVE_LEFT = (65361, 2424832)
+MOVE_UP = (65362, 2490368)
+MOVE_RIGHT = (65363, 2555904)
+MOVE_DOWN = (65364, 2621440)
 DECREASE_WINDOW = (45, 1048621, 1114029)  # -
 INCREASE_WINDOW = (43, 65579, 1114155, 1114027)  # +
 INCREASE_THRESHOLD = (116, 1048692)  # t
@@ -200,7 +200,7 @@ def set_windows(capture, windows_list=[]):
                              (255, 0, 0), ii)
 
         # handle events
-        k = cv.waitKey(10)
+        k = cv.waitKeyEx(10)
         if k is str:
             k = ord(k)
         if k > 0:

@@ -105,4 +105,4 @@ help.show()
 
 h5file = run_analysis(filename, fps, config_filename)
 plot_phase(h5file)
-app.exec_()
+app.exec()
